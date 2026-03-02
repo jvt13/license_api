@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Painel SQL - Gerenciamento de Licenças</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      color: #2c3e50;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #7f8c8d;
+      font-size: 14px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    /* CRIAR NOVO REGISTRO */
+    .form-new-machine {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr auto;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group select {
+      padding: 10px;
+      border: 2px solid #ecf0f1;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    /* TABELA */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    thead {
+      background: #34495e;
+      color: white;
+    }
+
+    th {
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #ecf0f1;
+      font-size: 14px;
+    }
+
+    tbody tr:hover {
+      background: #f9f9f9;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* INPUTS NA TABELA */
+    .table-input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: "Courier New", monospace;
+    }
+
+    .table-input:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+    }
+
+    /* STATUS BADGE */
+    .status-select {
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .badge-text {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .badge-approved {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge-expired {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    /* BOTÕES */
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2980b9;
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+
+    .btn-success {
+      background: #27ae60;
+      color: white;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .btn-success:hover {
+      background: #229954;
+    }
+
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .btn-danger:hover {
+      background: #c0392b;
+    }
+
+    .btn-secondary {
+      background: #95a5a6;
+      color: white;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .btn-secondary:hover {
+      background: #7f8c8d;
+    }
+
+    /* AÇÕES */
+    .actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-cell {
+      min-width: 180px;
+    }
+
+    /* ALERTS */
+    .alert {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .alert-danger {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .alert-warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    /* TABELA RESPONSIVA */
+    @media (max-width: 1200px) {
+      .form-new-machine {
+        grid-template-columns: 1fr 1fr;
+      }
+      table {
+        font-size: 13px;
+      }
+      th, td {
+        padding: 10px;
+      }
+    }
+
+    .info-box {
+      background: #ecf0f1;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      border-left: 4px solid #3498db;
+    }
+
+    .info-box strong {
+      color: #34495e;
+    }
+
+    .separator {
+      border: none;
+      height: 1px;
+      background: #ecf0f1;
+      margin: 30px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h1>🔧 Painel SQL - Gerenciamento de Licenças</h1>
+    <p>Visualize os registros do banco SQLite. Edite apenas a data de expiração.</p>
+  </div>
+
+  <% if (message) { %>
+    <div class="alert alert-<%= message.type %>">
+      <%= message.text %>
+    </div>
+  <% } %>
+
+  <!-- INFO BOX -->
+  <div class="info-box">
+    <strong>⚠️ Importante:</strong><br>
+    • <strong>Campos de visualização:</strong> Machine ID, Nome, IP e Status são apenas para consulta (não editáveis).<br>
+    • <strong>Campo editável:</strong> Apenas a data de expiração pode ser modificada diretamente na tabela.<br>
+    • <strong>Entrada de data:</strong> Informe no formato <code style="background: #fff; padding: 2px 6px;">yyyy-MM-dd HH:mm:ss</code> (horário local)<br>
+    • <strong>Armazenamento:</strong> Automaticamente convertido para ISO 8601 UTC no banco de dados.<br>
+    • <strong>Exemplo:</strong> "2026-03-02 14:15:28" → armazenado como <code style="background:#fff;padding:2px 6px;">2026-03-02T17:15:28.000Z</code> (UTC).<br>
+    • <strong>Sincronização:</strong> Ambos os painéis (Licenças e SQL) exibem o mesmo horário local.
+  </div>
+
+  <!-- FUNÇÃO DE FORMATAÇÃO -->
+  <% 
+    function formatLocal(dateString) {
+      if (!dateString) return '-'
+      const date = new Date(dateString)
+      return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    }
+
+    // produce a string usable in the editable input (YYYY-MM-DD HH:mm:ss)
+    function formatEditable(dateString) {
+      if (!dateString) return ''
+      const d = new Date(dateString)
+      if (isNaN(d.getTime())) return ''
+      const pad = n => String(n).padStart(2,'0')
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    }
+
+    function toISOString(date) {
+      if (!date) return ''
+      const d = new Date(date)
+      return d.toISOString()
+    }
+  %>
+
+  <!-- CRIAR NOVO REGISTRO -->
+  <div class="card">
+    <h2 style="margin-bottom: 15px; color: #2c3e50;">➕ Criar Nova Licença</h2>
+    <form method="POST" action="/admin/sql-panel/create" style="margin-bottom: 0;">
+      <div class="form-new-machine">
+        <div class="form-group">
+          <label>Machine ID *</label>
+          <input type="text" name="machine_id" placeholder="ex: PC_01" required>
+        </div>
+        <div class="form-group">
+          <label>Nome da Máquina</label>
+          <input type="text" name="machine_name" placeholder="ex: PC da Sala" >
+        </div>
+        <div class="form-group">
+          <label>IP da Máquina</label>
+          <input type="text" name="machine_ip" placeholder="ex: 192.168.1.100" >
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select name="status">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Expira em (data local)</label>
+          <input type="text" name="expires_at" placeholder="2026-03-02 14:15:28" 
+                 title="Digite no formato yyyy-MM-dd HH:mm:ss, será convertido para UTC">
+        </div>
+        <button type="submit" class="btn-primary">Criar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- TABELA DE REGISTROS -->
+  <div class="card">
+    <h2 style="margin-bottom: 15px; color: #2c3e50;">📋 Registros do Banco de Dados</h2>
+    
+    <% if (machines && machines.length > 0) { %>
+
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Machine ID</th>
+            <th>Nome</th>
+            <th>IP</th>
+            <th>Status</th>
+            <th>Expira em (Local / ISO 8601 UTC)</th>
+            <th>Criado em (Local)</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% machines.forEach(machine => {
+            const now = new Date();
+            const exp = machine.expires_at ? new Date(machine.expires_at) : null;
+            let displayStatus = machine.status;
+
+            if (displayStatus === 'approved' && exp && exp < now) {
+              displayStatus = 'expired';
+            }
+          %>
+            <tr>
+              <td style="color: #7f8c8d; font-weight: 600;">
+                <%= machine.id %>
+              </td>
+
+              <td style="color: #2c3e50; font-weight: 500;">
+                <%= machine.machine_id %>
+              </td>
+
+              <td style="color: #555;">
+                <%= machine.machine_name || '-' %>
+              </td>
+
+              <td style="color: #777; font-family: monospace; font-size: 13px;">
+                <%= machine.machine_ip || '-' %>
+              </td>
+
+              <td>
+                <% if (machine.status === 'pending') { %>
+                  <span class="badge-text badge-pending">Pending</span>
+                <% } else if (displayStatus === 'approved') { %>
+                  <span class="badge-text badge-approved">Approved</span>
+                <% } else if (displayStatus === 'expired') { %>
+                  <span class="badge-text badge-expired">Expired</span>
+                <% } %>
+              </td>
+
+              <td>
+                <form method="POST" action="/admin/sql-panel/update/<%= machine.id %>" style="display: inline;">
+                  <input type="hidden" name="field" value="expires_at">
+                  <input type="hidden" name="old_value" value="<%= machine.expires_at || '' %>">
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-size: 12px; color: #7f8c8d; font-weight: 600;">
+                      <%= formatLocal(machine.expires_at) %>
+                    </span>
+                    <input type="text" class="table-input" name="value" 
+                         value="<%= machine.expires_at ? formatEditable(machine.expires_at) : '' %>" 
+                         placeholder="2026-03-02 14:15:28" 
+                         title="Digite data/hora local (yyyy-MM-dd HH:mm:ss). Será convertida para UTC no envio."
+                         onblur="this.form.submit()" style="max-width: 280px; font-family: monospace; font-size: 11px;">
+                  </div>
+                </form>
+              </td>
+
+              <td style="color: #7f8c8d; font-size: 12px;">
+                <%= formatLocal(machine.created_at) %>
+              </td>
+
+              <td class="action-cell">
+                <div class="actions">
+                  <form method="POST" action="/admin/sql-panel/delete/<%= machine.id %>" style="display: inline;">
+                    <button type="submit" class="btn-danger" onclick="return confirm('Tem certeza que deseja deletar este registro?')">
+                      🗑️ Deletar
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+
+      <div style="color: #7f8c8d; font-size: 13px; margin-top: 15px;">
+        Total: <strong><%= machines.length %></strong> registros
+      </div>
+
+    <% } else { %>
+      <p style="color: #7f8c8d; text-align: center; padding: 40px;">
+        Nenhum registro encontrado no banco de dados.
+      </p>
+    <% } %>
+
+  </div>
+
+  <hr class="separator">
+
+  <div style="text-align: center; color: #95a5a6; font-size: 12px; padding: 20px;">
+    <p>Formato ISO 8601: YYYY-MM-DDTHH:MM:SS.SSSZ</p>
+    <p style="margin-top: 10px;">
+      <a href="/admin/licenses" style="color: #3498db; text-decoration: none;">← Voltar ao Painel de Licenças</a>
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>
+<script>
+(function(){
+  function normalizeInputToUTC(str){
+    if(!str) return '';
+    // allow space separator or T
+    var input = str.replace(' ', 'T');
+    // if already contains timezone (Z or ±HH:MM) parse and return normalized ISO
+    if(/Z$|[+\-]\d{2}:\d{2}$/.test(input)){
+      var d = new Date(input);
+      return isNaN(d.getTime()) ? str : d.toISOString();
+    }
+
+    // parse local datetime
+    var d = new Date(input);
+    if(!isNaN(d.getTime())) return d.toISOString();
+    return str;
+  }
+
+  // Convert create form expires_at on submit
+  var createForm = document.querySelector('form[action="/admin/sql-panel/create"]');
+  if(createForm){
+    createForm.addEventListener('submit', function(e){
+      var inp = createForm.querySelector('input[name="expires_at"]');
+      if(inp && inp.value.trim()){
+        inp.value = normalizeInputToUTC(inp.value.trim());
+      }
+    });
+  }
+
+  // Convert inline update forms (field=expires_at)
+  document.querySelectorAll('form[action^="/admin/sql-panel/update"]').forEach(function(form){
+    var field = form.querySelector('input[name="field"]');
+    if(field && field.value === 'expires_at'){
+      var inp = form.querySelector('input[name="value"]');
+      if(inp){
+        inp.addEventListener('blur', function(){
+          if(this.value.trim()) this.value = normalizeInputToUTC(this.value.trim());
+        });
+        form.addEventListener('submit', function(){
+          if(inp.value.trim()) inp.value = normalizeInputToUTC(inp.value.trim());
+        });
+      }
+    }
+  });
+
+})();
+</script>
