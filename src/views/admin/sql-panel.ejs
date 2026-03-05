@@ -396,8 +396,14 @@
         </div>
         <div class="form-group">
           <label>Expira em (data local)</label>
-          <input type="text" name="expires_at" placeholder="2026-03-02 14:15:28" 
-                 title="Digite no formato yyyy-MM-dd HH:mm:ss, será convertido para UTC">
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <input type="text" name="expires_at" placeholder="2026-03-02 14:15:28" 
+                   title="Digite no formato yyyy-MM-dd HH:mm:ss, será convertido para UTC">
+            <small style="color:#6b7280; font-size:11px; margin-top:4px;">
+              Mostrado no seu horário local; será salvo em ISO UTC.
+              <div id="create-expires-iso" style="margin-top:4px; font-family: monospace; color:#444;">Armazenado (ISO): -</div>
+            </small>
+          </div>
         </div>
         <button type="submit" class="btn-primary">Criar</button>
       </div>
@@ -473,6 +479,14 @@
                       value="" placeholder="2026-03-02 14:15:28" 
                       title="Digite data/hora local (yyyy-MM-dd HH:mm:ss). Será convertida para UTC no envio."
                       onblur="this.form.submit()" style="max-width: 280px; font-family: monospace; font-size: 11px;">
+                    <small style="color:#6b7280; font-size:11px; margin-top:4px;">
+                      Mostrado no seu horário local; será salvo em ISO UTC.
+                      <% if (machine.expires_at) { %>
+                        <div style="margin-top:4px; font-family: monospace; color:#444;">Armazenado (ISO): <%= machine.expires_at %></div>
+                      <% } else { %>
+                        <div style="margin-top:4px; font-family: monospace; color:#444;">Armazenado (ISO): -</div>
+                      <% } %>
+                    </small>
                   </div>
                 </form>
               </td>
@@ -550,12 +564,31 @@
   // Formulário de criação: converte expires_at ao enviar
   var createForm = document.querySelector('form[action="/admin/sql-panel/create"]');
   if(createForm){
+    // converte ao enviar
     createForm.addEventListener('submit', function(e){
       var inp = createForm.querySelector('input[name="expires_at"]');
       if(inp && inp.value.trim()){
         inp.value = normalizeInputToUTC(inp.value.trim());
       }
     });
+
+    // atualiza preview ISO enquanto usuário digita / ao perder foco
+    (function(){
+      var inp = createForm.querySelector('input[name="expires_at"]');
+      var preview = document.getElementById('create-expires-iso');
+      function updatePreview(){
+        if(!preview || !inp) return;
+        var v = inp.value.trim();
+        if(!v){ preview.textContent = 'Armazenado (ISO): -'; return; }
+        var iso = normalizeInputToUTC(v);
+        if(!iso) preview.textContent = 'Armazenado (ISO): -';
+        else preview.textContent = 'Armazenado (ISO): ' + iso;
+      }
+      inp && inp.addEventListener('input', updatePreview);
+      inp && inp.addEventListener('blur', updatePreview);
+      // inicializa preview se já houver valor
+      updatePreview();
+    })();
   }
 
   // Formulários inline de atualização: converte ao sair do campo
