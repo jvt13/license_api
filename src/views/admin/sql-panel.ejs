@@ -298,6 +298,8 @@
   <div class="header">
     <h1>🔧 Painel SQL - Gerenciamento de Licenças</h1>
     <p>Visualize os registros do banco SQLite. Edite apenas a data de expiração.</p>
+
+    <div id="tz-label-sql" style="margin-top:8px; color:#6b7280; font-size:13px;">Horário exibido: detectando...</div>
   </div>
 
   <% if (message) { %>
@@ -586,6 +588,25 @@
       var s = local.getFullYear() + '-' + pad(local.getMonth()+1) + '-' + pad(local.getDate()) + ' ' + pad(local.getHours()) + ':' + pad(local.getMinutes()) + ':' + pad(local.getSeconds());
       inp.value = s;
     });
+  })();
+
+  // Preenche rótulo de timezone detectado pelo navegador (nome e offset UTC)
+  (function(){
+    try{
+      var tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Horário local';
+      var offsetMin = new Date().getTimezoneOffset(); // minutos (UTC - local)
+      var offsetHours = -offsetMin / 60; // sinal para exibir (ex: -3)
+      var sign = offsetHours >= 0 ? '+' : '-';
+      var absHours = Math.abs(offsetHours);
+      var offsetStr = 'UTC' + (offsetHours >= 0 ? '-' + String(absHours) : '-' + String(absHours));
+      // better format: show as UTC-3 or UTC+1
+      var offsetLabel = 'UTC' + (offsetHours >= 0 ? '-' : '+') + Math.abs(offsetHours);
+      var el = document.getElementById('tz-label-sql');
+      if(el) el.textContent = 'Horário exibido: ' + tzName + ' (' + offsetLabel + ')';
+    }catch(e){
+      var el = document.getElementById('tz-label-sql');
+      if(el) el.textContent = 'Horário exibido: (não detectado)';
+    }
   })();
 
 </script>
