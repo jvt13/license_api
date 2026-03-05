@@ -467,11 +467,10 @@
                     <span style="font-size: 12px; color: #7f8c8d; font-weight: 600;">
                       <%= formatLocal(machine.expires_at) %>
                     </span>
-                    <input type="text" class="table-input" name="value" 
-                         value="<%= machine.expires_at ? formatEditable(machine.expires_at) : '' %>" 
-                         placeholder="2026-03-02 14:15:28" 
-                         title="Digite data/hora local (yyyy-MM-dd HH:mm:ss). Será convertida para UTC no envio."
-                         onblur="this.form.submit()" style="max-width: 280px; font-family: monospace; font-size: 11px;">
+                    <input type="text" class="table-input" name="value" data-iso="<%= machine.expires_at || '' %>"
+                      value="" placeholder="2026-03-02 14:15:28" 
+                      title="Digite data/hora local (yyyy-MM-dd HH:mm:ss). Será convertida para UTC no envio."
+                      onblur="this.form.submit()" style="max-width: 280px; font-family: monospace; font-size: 11px;">
                   </div>
                 </form>
               </td>
@@ -573,5 +572,20 @@
     }
   });
 
-})();
+  // Após carregar, popula inputs de expires com hora LOCAL do navegador
+  (function(){
+    function pad(n){ return String(n).padStart(2,'0') }
+    document.querySelectorAll('input[name="value"][data-iso]').forEach(function(inp){
+      var iso = inp.getAttribute('data-iso');
+      if(!iso) return;
+      // se o input já tiver valor (editado), não sobrescreve
+      if(inp.value && inp.value.trim() !== '') return;
+      var d = new Date(iso);
+      if(isNaN(d.getTime())) return;
+      var local = d;
+      var s = local.getFullYear() + '-' + pad(local.getMonth()+1) + '-' + pad(local.getDate()) + ' ' + pad(local.getHours()) + ':' + pad(local.getMinutes()) + ':' + pad(local.getSeconds());
+      inp.value = s;
+    });
+  })();
+
 </script>
