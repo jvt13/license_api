@@ -127,17 +127,17 @@
   <%
 function formatLocal(dateString) {
   if (!dateString) return '-'
-
   const date = new Date(dateString)
-
-  return date.toLocaleString('pt-BR', {
+  // Sempre exibe em America/Sao_Paulo, independente do timezone do servidor
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
-  })
+  }).format(date)
 }
 %>
   <table>
@@ -152,11 +152,12 @@ function formatLocal(dateString) {
     <tbody>
 
       <% machines.forEach(machine => { 
-           const now = new Date();
-           const exp = machine.expires_at ? new Date(machine.expires_at) : null;
+           // Sempre compare em UTC (milliseconds), nunca use timezone local do servidor
+           const nowMs = Date.now();
+           const expMs = machine.expires_at ? new Date(machine.expires_at).getTime() : null;
            let status = machine.status;
 
-           if (status === 'approved' && exp && exp < now) {
+           if (status === 'approved' && expMs && expMs < nowMs) {
              status = 'expired';
            }
       %>

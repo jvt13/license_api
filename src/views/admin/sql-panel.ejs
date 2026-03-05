@@ -309,36 +309,56 @@
   <!-- INFO BOX -->
   <div class="info-box">
     <strong>⚠️ Importante:</strong><br>
-    • <strong>Campos de visualização:</strong> Machine ID, Nome, IP e Status são apenas para consulta (não editáveis).<br>
-    • <strong>Campo editável:</strong> Apenas a data de expiração pode ser modificada diretamente na tabela.<br>
-    • <strong>Entrada de data:</strong> Informe no formato <code style="background: #fff; padding: 2px 6px;">yyyy-MM-dd HH:mm:ss</code> (horário local)<br>
-    • <strong>Armazenamento:</strong> Automaticamente convertido para ISO 8601 UTC no banco de dados.<br>
-    • <strong>Exemplo:</strong> "2026-03-02 14:15:28" → armazenado como <code style="background:#fff;padding:2px 6px;">2026-03-02T17:15:28.000Z</code> (UTC).<br>
-    • <strong>Sincronização:</strong> Ambos os painéis (Licenças e SQL) exibem o mesmo horário local.
+    • <strong>Entrada de data:</strong> Digite sempre a hora LOCAL da sua máquina no formato <code style="background: #fff; padding: 2px 6px;">yyyy-MM-dd HH:mm:ss</code><br>
+    • <strong>Conversão automática:</strong> O navegador detecta seu timezone automaticamente e converte para UTC ao enviar.<br>
+    • <strong>Exibição:</strong> Todas as datas são exibidas em <code style="background: #fff; padding: 2px 6px;">America/Sao_Paulo</code> (UTC-3), independente do servidor.<br>
+    • <strong>Comparação:</strong> Expiração é verificada sempre em UTC, independente do servidor e do navegador.<br>
+    • <strong>Exemplo:</strong> Digite "2026-03-02 14:15:28" (sua hora local) → enviado como <code style="background:#fff;padding:2px 6px;">2026-03-02T17:15:28.000Z</code> → exibido como "2026-03-02 14:15:28"<br>
+    • <strong>Benefício:</strong> Funciona corretamente em desktop, VPS ou qualquer servidor, em qualquer timezone.
   </div>
 
-  <!-- FUNÇÃO DE FORMATAÇÃO -->
+  <!-- FUNÇÃO DE FORMATAÇÃO (SEMPRE EM AMERICA/SAO_PAULO) -->
   <% 
     function formatLocal(dateString) {
       if (!dateString) return '-'
       const date = new Date(dateString)
-      return date.toLocaleString('pt-BR', {
+      // Sempre exibe em America/Sao_Paulo, independente do timezone do servidor
+      return new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
-      })
+      }).format(date)
     }
 
-    // produce a string usable in the editable input (YYYY-MM-DD HH:mm:ss)
+    // Produz string editável em formato local (YYYY-MM-DD HH:mm:ss)
     function formatEditable(dateString) {
       if (!dateString) return ''
       const d = new Date(dateString)
       if (isNaN(d.getTime())) return ''
-      const pad = n => String(n).padStart(2,'0')
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+      
+      // Pega partes da data em America/Sao_Paulo
+      const parts = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).formatToParts(d)
+      
+      const year = parts.find(p => p.type === 'year').value
+      const month = parts.find(p => p.type === 'month').value
+      const day = parts.find(p => p.type === 'day').value
+      const hour = parts.find(p => p.type === 'hour').value
+      const minute = parts.find(p => p.type === 'minute').value
+      const second = parts.find(p => p.type === 'second').value
+      
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`
     }
 
     function toISOString(date) {
@@ -403,11 +423,12 @@
         </thead>
         <tbody>
           <% machines.forEach(machine => {
-            const now = new Date();
-            const exp = machine.expires_at ? new Date(machine.expires_at) : null;
+            // Sempre compare em UTC (milliseconds), nunca use timezone local do servidor
+            const nowMs = Date.now();
+            const expMs = machine.expires_at ? new Date(machine.expires_at).getTime() : null;
             let displayStatus = machine.status;
 
-            if (displayStatus === 'approved' && exp && exp < now) {
+            if (displayStatus === 'approved' && expMs && expMs < nowMs) {
               displayStatus = 'expired';
             }
           %>
@@ -500,23 +521,32 @@
 </html>
 <script>
 (function(){
+  /**
+   * Converte entrada de data/hora local do usuário para ISO 8601 UTC
+   * O navegador interpreta "YYYY-MM-DD HH:mm:ss" como hora LOCAL do usuário
+   * e converte para UTC via toISOString()
+   */
   function normalizeInputToUTC(str){
     if(!str) return '';
-    // allow space separator or T
-    var input = str.replace(' ', 'T');
-    // if already contains timezone (Z or ±HH:MM) parse and return normalized ISO
+    
+    // Aceita "2026-03-02 08:50:00" (local) ou "2026-03-02T08:50:00" (já com T)
+    var input = str.trim().replace(' ', 'T');
+    
+    // Se já tem timezone (Z ou ±HH:MM), normaliza
     if(/Z$|[+\-]\d{2}:\d{2}$/.test(input)){
       var d = new Date(input);
       return isNaN(d.getTime()) ? str : d.toISOString();
     }
 
-    // parse local datetime
+    // Sem timezone = hora LOCAL do navegador do usuário
+    // new Date('2026-03-02T08:50:00') interpreta como hora local
+    // .toISOString() retorna em UTC equivalente
     var d = new Date(input);
     if(!isNaN(d.getTime())) return d.toISOString();
     return str;
   }
 
-  // Convert create form expires_at on submit
+  // Formulário de criação: converte expires_at ao enviar
   var createForm = document.querySelector('form[action="/admin/sql-panel/create"]');
   if(createForm){
     createForm.addEventListener('submit', function(e){
@@ -527,7 +557,7 @@
     });
   }
 
-  // Convert inline update forms (field=expires_at)
+  // Formulários inline de atualização: converte ao sair do campo
   document.querySelectorAll('form[action^="/admin/sql-panel/update"]').forEach(function(form){
     var field = form.querySelector('input[name="field"]');
     if(field && field.value === 'expires_at'){
