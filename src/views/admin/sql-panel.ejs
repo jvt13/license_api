@@ -579,8 +579,13 @@
     function pad(n){ return String(n).padStart(2,'0') }
     document.querySelectorAll('input[name="value"][data-iso]').forEach(function(inp){
       var iso = inp.getAttribute('data-iso');
-      if(!iso) return;
-      var d = new Date(iso);
+      var d = null;
+      if(iso && iso.trim()){
+        d = new Date(iso);
+      } else {
+        // fallback: use browser local now so user can edit immediately
+        d = new Date();
+      }
       if(isNaN(d.getTime())) return;
       var local = d;
       var s = local.getFullYear() + '-' + pad(local.getMonth()+1) + '-' + pad(local.getDate()) + ' ' + pad(local.getHours()) + ':' + pad(local.getMinutes()) + ':' + pad(local.getSeconds());
