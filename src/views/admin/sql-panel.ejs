@@ -299,7 +299,11 @@
     <h1>🔧 Painel SQL - Gerenciamento de Licenças</h1>
     <p>Visualize os registros do banco SQLite. Edite apenas a data de expiração.</p>
 
-    <div id="tz-label-sql" style="margin-top:8px; color:#6b7280; font-size:13px;">Horário exibido: detectando...</div>
+    <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
+      <div id="tz-label-sql" style="color:#6b7280; font-size:13px;">Horário exibido: detectando...</div>
+      <div id="server-time-box" style="color:#6b7280; font-size:13px;">Servidor: <span id="server-time" data-server-iso="<%= new Date().toISOString() %>"><%= new Date().toISOString() %></span></div>
+      <div id="server-diff" style="color:#ff5b5b; font-size:13px; display:none;">Relógios fora de sincronia</div>
+    </div>
   </div>
 
   <% if (message) { %>
@@ -642,6 +646,29 @@
     }catch(e){
       var el = document.getElementById('tz-label-sql');
       if(el) el.textContent = 'Horário exibido: (não detectado)';
+    }
+    
+    // Checa diferença entre relógio do browser e do servidor
+    try{
+      var serverEl = document.getElementById('server-time');
+      if(serverEl){
+        var serverIso = serverEl.getAttribute('data-server-iso');
+        var serverMs = new Date(serverIso).getTime();
+        var clientMs = Date.now();
+        var diffSec = Math.round((serverMs - clientMs) / 1000); // positivo = servidor à frente
+        var diffEl = document.getElementById('server-diff');
+        if(Math.abs(diffSec) > 120){
+          if(diffEl){
+            diffEl.style.display = 'inline';
+            var aheadBehind = diffSec > 0 ? 'à frente' : 'atrasado';
+            diffEl.textContent = 'Relógios fora de sincronia: servidor ' + aheadBehind + ' por ' + Math.abs(diffSec) + 's';
+          }
+        } else {
+          if(diffEl) diffEl.style.display = 'none';
+        }
+      }
+    }catch(e){
+      console.warn('Não foi possível verificar diferença de relógios', e);
     }
   })();
 
