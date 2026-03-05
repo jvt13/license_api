@@ -470,7 +470,7 @@
                       <%= formatLocal(machine.expires_at) %>
                     </span>
                     <input type="text" class="table-input" name="value" data-iso="<%= machine.expires_at || '' %>"
-                      value="" placeholder="2026-03-02 14:15:28" 
+                      value="<%= machine.expires_at ? formatEditable(machine.expires_at) : '' %>" placeholder="2026-03-02 14:15:28" 
                       title="Digite data/hora local (yyyy-MM-dd HH:mm:ss). Será convertida para UTC no envio."
                       onblur="this.form.submit()" style="max-width: 280px; font-family: monospace; font-size: 11px;">
                   </div>
