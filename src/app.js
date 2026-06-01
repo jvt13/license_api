@@ -91,6 +91,24 @@ app.post('/admin/licenses/revoke',
     res.redirect('/admin/licenses')
 })
 
+app.post('/admin/licenses/delete',
+  authAdmin,
+  express.urlencoded({ extended: true }),
+  (req, res) => {
+    const { machine_id } = req.body
+
+    try {
+      if (!machine_id) {
+        return res.redirect('/admin/licenses')
+      }
+      model.deleteMachine(machine_id)
+    } catch (err) {
+      console.error('Erro ao excluir solicitação:', err.message)
+    }
+
+    res.redirect('/admin/licenses')
+  })
+
 // ===== PAINEL SQL =====
 
 app.get('/admin/sql-panel', authAdmin, (req, res) => {
@@ -110,9 +128,16 @@ app.get('/admin/sql-panel', authAdmin, (req, res) => {
 
 app.post('/admin/sql-panel/create', authAdmin, express.urlencoded({ extended: true }), (req, res) => {
   try {
-    const { machine_id, status, expires_at, machine_name, machine_ip } = req.body
+    const { machine_id, status, expires_at, machine_name, machine_ip, system_name } = req.body
 
-    model.createMachine(machine_id, status || 'pending', expires_at || null, machine_name || null, machine_ip || null)
+    model.createMachine(
+      machine_id,
+      status || 'pending',
+      expires_at || null,
+      machine_name || null,
+      machine_ip || null,
+      system_name || null
+    )
 
     res.redirect('/admin/sql-panel?message=Licença criada com sucesso!&type=success')
   } catch (err) {

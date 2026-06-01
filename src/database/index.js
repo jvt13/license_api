@@ -24,6 +24,15 @@ try {
 } catch (e) {
   // ignore, column may already exist
 }
-
+try {
+  db.exec(`ALTER TABLE machines ADD COLUMN system_name TEXT`)
+} catch (e) {
+  // ignore, column may already exist
+}
+try {
+  db.exec(`ALTER TABLE machines ADD COLUMN request_date TEXT`)
+} catch (e) {
+  // ignore, column may already exist
+}
 
 module.exports = db

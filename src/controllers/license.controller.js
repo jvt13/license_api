@@ -5,13 +5,13 @@ const service = require('../services/license.service')
 const model = require('../models/license.model')
 
 exports.validate = (req, res) => {
-  const { machine_id, machine_name, machine_ip } = req.body
+  const { machine_id, machine_name, machine_ip, system_name } = req.body
 
   if (!machine_id) {
     return res.status(400).json({ error: 'machine_id obrigatório' })
   }
 
-  const result = service.handleValidationRequest(machine_id, machine_name, machine_ip)
+  const result = service.handleValidationRequest(machine_id, machine_name, machine_ip, system_name)
 
   return res.json(result)
 }

@@ -93,6 +93,46 @@
     button:hover {
       background: #1f6391;
     }
+
+    .stat-card {
+      flex: 1;
+      padding: 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.15s;
+      border: 3px solid transparent;
+      user-select: none;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .stat-card.is-active {
+      border-color: #2980b9;
+      box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.35);
+    }
+
+    .stat-card--pending { background: #fff3cd; }
+    .stat-card--active { background: #d4edda; }
+    .stat-card--expired { background: #f8d7da; }
+    .stat-card--total { background: #e2e3e5; }
+
+    th.sortable {
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    th.sortable:hover {
+      background: #3d566e;
+    }
+
+    .sort-indicator {
+      margin-left: 6px;
+      font-size: 11px;
+      opacity: 0.85;
+    }
   </style>
 </head>
 <body>
@@ -101,24 +141,24 @@
 
 <div id="tz-label" style="margin-bottom:12px; color:#6b7280; font-size:13px;">Horário exibido: detectando...</div>
 
-<div style="display:flex; gap:20px; margin-bottom:25px;">
+<div id="stat-cards" style="display:flex; gap:20px; margin-bottom:25px;">
 
-  <div style="background:#fff3cd; padding:20px; border-radius:10px; flex:1;">
+  <div class="stat-card stat-card--pending" data-filter="pending" role="button" tabindex="0" title="Filtrar pendentes">
     <strong>Pendentes</strong>
     <div style="font-size:28px;"><%= stats.pending %></div>
   </div>
 
-  <div style="background:#d4edda; padding:20px; border-radius:10px; flex:1;">
+  <div class="stat-card stat-card--active" data-filter="active" role="button" tabindex="0" title="Filtrar ativos">
     <strong>Ativos</strong>
     <div style="font-size:28px;"><%= stats.approved %></div>
   </div>
 
-  <div style="background:#f8d7da; padding:20px; border-radius:10px; flex:1;">
+  <div class="stat-card stat-card--expired" data-filter="expired" role="button" tabindex="0" title="Filtrar expirados">
     <strong>Expirados</strong>
     <div style="font-size:28px;"><%= stats.expired %></div>
   </div>
 
-  <div style="background:#e2e3e5; padding:20px; border-radius:10px; flex:1;">
+  <div class="stat-card stat-card--total" data-filter="total" role="button" tabindex="0" title="Exibir todos">
     <strong>Total</strong>
     <div style="font-size:28px;"><%= stats.total %></div>
   </div>
@@ -146,25 +186,37 @@ function formatLocal(dateString) {
     <thead>
       <tr>
         <th>Machine ID</th>
+        <th>Sistema</th>
         <th>Status</th>
+        <th id="th-request-date" class="sortable" title="Ordenar por data da solicitação">
+          Solicitado em<span class="sort-indicator" id="sort-indicator"></span>
+        </th>
         <th>Expira em</th>
         <th>Ação</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody id="licenses-tbody">
 
-      <% machines.forEach(machine => { 
-           // Sempre compare em UTC (milliseconds), nunca use timezone local do servidor
+      <% machines.forEach((machine, index) => { 
            const nowMs = Date.now();
            const expMs = machine.expires_at ? new Date(machine.expires_at).getTime() : null;
            let status = machine.status;
+           let filterKey = 'other';
+
+           if (machine.status === 'pending') {
+             filterKey = 'pending';
+           } else if (machine.status === 'approved' && expMs) {
+             filterKey = expMs < nowMs ? 'expired' : 'active';
+           }
 
            if (status === 'approved' && expMs && expMs < nowMs) {
              status = 'expired';
            }
       %>
 
-      <tr>
+      <tr data-filter="<%= filterKey %>"
+          data-request-date="<%= machine.request_date || '' %>"
+          data-default-order="<%= index %>">
         <td>
           <strong><%= machine.machine_id %></strong><br>
           <% if (machine.machine_name) { %>
@@ -176,6 +228,10 @@ function formatLocal(dateString) {
         </td>
 
         <td>
+          <%= machine.system_name ? machine.system_name : 'Não informado' %>
+        </td>
+
+        <td>
           <% if (status === 'pending') { %>
             <span class="badge pending">Pending</span>
           <% } else if (status === 'approved') { %>
@@ -183,6 +239,10 @@ function formatLocal(dateString) {
           <% } else if (status === 'expired') { %>
             <span class="badge expired">Expired</span>
           <% } %>
+        </td>
+
+        <td>
+          <%= formatLocal(machine.request_date) %>
         </td>
 
         <td>
@@ -204,6 +264,13 @@ function formatLocal(dateString) {
             <button type="submit" style="background:#c0392b;">Revogar</button>
         </form>
 
+        <!-- Excluir -->
+        <form method="POST" action="/admin/licenses/delete"
+              onsubmit="return confirm('Tem certeza que deseja excluir esta solicitação?');">
+            <input type="hidden" name="machine_id" value="<%= machine.machine_id %>" />
+            <button type="submit" style="background:#7f8c8d;">Excluir</button>
+        </form>
+
         </td>
 
       </tr>
@@ -217,16 +284,124 @@ function formatLocal(dateString) {
 </body>
 </html>
 <script>
-// Preenche rótulo de timezone detectado pelo navegador
-;(function(){
-  try{
+;(function () {
+  try {
     var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Horário local'
     var el = document.getElementById('tz-label')
-    if(el) el.textContent = 'Horário exibido: ' + tz
-  }catch(e){
-    // fallback
+    if (el) el.textContent = 'Horário exibido: ' + tz
+  } catch (e) {
     var el = document.getElementById('tz-label')
-    if(el) el.textContent = 'Horário exibido: (não detectado)'
+    if (el) el.textContent = 'Horário exibido: (não detectado)'
   }
+})();
+
+;(function () {
+  var tbody = document.getElementById('licenses-tbody')
+  if (!tbody) return
+
+  var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'))
+  var statCards = document.querySelectorAll('.stat-card')
+  var thRequestDate = document.getElementById('th-request-date')
+  var sortIndicator = document.getElementById('sort-indicator')
+
+  var currentFilter = null
+  var sortState = null
+
+  function parseRequestDateMs(iso) {
+    if (!iso) return null
+    var ms = new Date(iso).getTime()
+    return isNaN(ms) ? null : ms
+  }
+
+  function compareDefaultOrder(a, b) {
+    return Number(a.getAttribute('data-default-order')) - Number(b.getAttribute('data-default-order'))
+  }
+
+  function sortRows() {
+    var sorted = rows.slice()
+    if (!sortState) {
+      sorted.sort(compareDefaultOrder)
+    } else {
+      sorted.sort(function (a, b) {
+        var ta = parseRequestDateMs(a.getAttribute('data-request-date'))
+        var tb = parseRequestDateMs(b.getAttribute('data-request-date'))
+        if (ta === null && tb === null) return compareDefaultOrder(a, b)
+        if (ta === null) return 1
+        if (tb === null) return -1
+        if (ta === tb) return compareDefaultOrder(a, b)
+        return sortState === 'asc' ? ta - tb : tb - ta
+      })
+    }
+    sorted.forEach(function (row) {
+      tbody.appendChild(row)
+    })
+  }
+
+  function rowMatchesFilter(row) {
+    if (!currentFilter || currentFilter === 'total') return true
+    return row.getAttribute('data-filter') === currentFilter
+  }
+
+  function applyFilter() {
+    rows.forEach(function (row) {
+      row.style.display = rowMatchesFilter(row) ? '' : 'none'
+    })
+  }
+
+  function updateStatCardsHighlight() {
+    statCards.forEach(function (card) {
+      var filter = card.getAttribute('data-filter')
+      var active = currentFilter === filter
+      card.classList.toggle('is-active', active)
+    })
+  }
+
+  function updateSortIndicator() {
+    if (!sortIndicator) return
+    if (sortState === 'asc') sortIndicator.textContent = ' ▲'
+    else if (sortState === 'desc') sortIndicator.textContent = ' ▼'
+    else sortIndicator.textContent = ''
+  }
+
+  function applyView() {
+    sortRows()
+    applyFilter()
+    updateStatCardsHighlight()
+    updateSortIndicator()
+  }
+
+  function setFilter(filter) {
+    if (filter === 'total') {
+      currentFilter = null
+    } else if (currentFilter === filter) {
+      currentFilter = null
+    } else {
+      currentFilter = filter
+    }
+    applyView()
+  }
+
+  statCards.forEach(function (card) {
+    card.addEventListener('click', function () {
+      setFilter(card.getAttribute('data-filter'))
+    })
+    card.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        setFilter(card.getAttribute('data-filter'))
+      }
+    })
+  })
+
+  if (thRequestDate) {
+    thRequestDate.addEventListener('click', function () {
+      if (sortState === null) sortState = 'asc'
+      else if (sortState === 'asc') sortState = 'desc'
+      else sortState = null
+      applyView()
+    })
+  }
+
+  applyView()
 })();
 </script>

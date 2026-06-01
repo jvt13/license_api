@@ -19,22 +19,34 @@ function generateToken(machine) {
   })
 }
 
-function handleValidationRequest(machine_id, machine_name=null, machine_ip=null) {
+function normalizeOptionalString(value) {
+  if (value == null) return null
+  const trimmed = String(value).trim()
+  return trimmed === '' ? null : trimmed
+}
+
+function handleValidationRequest(machine_id, machine_name=null, machine_ip=null, system_name=null) {
+  machine_name = normalizeOptionalString(machine_name)
+  machine_ip = normalizeOptionalString(machine_ip)
+  system_name = normalizeOptionalString(system_name)
+
   let machine = model.getMachine(machine_id)
 
   if (!machine) {
-    model.createRequest(machine_id, machine_name, machine_ip)
+    model.createRequest(machine_id, machine_name, machine_ip, system_name)
     return { status: 'pending' }
   }
-  // if name provided and differs, update record
   if (machine_name && machine.machine_name !== machine_name) {
     model.updateMachineById(machine.id, 'machine_name', machine_name)
     machine.machine_name = machine_name
   }
-  // if IP provided and differs, update record
   if (machine_ip && machine.machine_ip !== machine_ip) {
     model.updateMachineById(machine.id, 'machine_ip', machine_ip)
     machine.machine_ip = machine_ip
+  }
+  if (system_name && machine.system_name !== system_name) {
+    model.updateMachineById(machine.id, 'system_name', system_name)
+    machine.system_name = system_name
   }
 
   if (machine.status !== 'approved') {

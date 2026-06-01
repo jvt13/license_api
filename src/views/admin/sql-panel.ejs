@@ -47,7 +47,7 @@
     /* CRIAR NOVO REGISTRO */
     .form-new-machine {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr auto;
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto;
       gap: 12px;
       align-items: flex-end;
     }
@@ -392,6 +392,10 @@
           <input type="text" name="machine_ip" placeholder="ex: 192.168.1.100" >
         </div>
         <div class="form-group">
+          <label>Sistema</label>
+          <input type="text" name="system_name" placeholder="ex: Sistema Financeiro" >
+        </div>
+        <div class="form-group">
           <label>Status</label>
           <select name="status">
             <option value="pending">Pending</option>
@@ -427,7 +431,9 @@
             <th>Machine ID</th>
             <th>Nome</th>
             <th>IP</th>
+            <th>Sistema</th>
             <th>Status</th>
+            <th>Solicitado em</th>
             <th>Expira em (Local / ISO 8601 UTC)</th>
             <th>Criado em (Local)</th>
             <th>Ações</th>
@@ -461,6 +467,10 @@
                 <%= machine.machine_ip || '-' %>
               </td>
 
+              <td style="color: #555;">
+                <%= machine.system_name || 'Não informado' %>
+              </td>
+
               <td>
                 <% if (machine.status === 'pending') { %>
                   <span class="badge-text badge-pending">Pending</span>
@@ -469,6 +479,10 @@
                 <% } else if (displayStatus === 'expired') { %>
                   <span class="badge-text badge-expired">Expired</span>
                 <% } %>
+              </td>
+
+              <td style="color: #7f8c8d; font-size: 12px;">
+                <%= formatLocal(machine.request_date) %>
               </td>
 
               <td>
