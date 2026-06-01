@@ -5,7 +5,9 @@ const path = require('path')
 const routes = require('./routes/license.routes')
 const adminRoutes = require("./routes/admin.routes")
 const model = require('./models/license.model')
+const adminModel = require('./models/admin.model')
 const authAdmin = require('./middlewares/authAdmin')
+const { adminAccessGate, clearAdminCookie } = require('./middlewares/adminAccess')
 
 const app = express()
 app.use(express.json())
@@ -14,20 +16,64 @@ app.use(express.urlencoded({ extended: true }))
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'views'))
 
+app.use(adminAccessGate)
+
 app.use('/admin', adminRoutes)
 app.use('/api/license', routes)
 
+app.get('/admin/setup', (req, res) => {
+  res.render('admin/setup', {
+    error: null,
+    minLength: adminModel.getMinPasswordLength()
+  })
+})
+
+app.post('/admin/setup', express.urlencoded({ extended: true }), (req, res) => {
+  const { password, confirm_password } = req.body
+
+  if (!password || !confirm_password) {
+    return res.render('admin/setup', {
+      error: 'Preencha todos os campos.',
+      minLength: adminModel.getMinPasswordLength()
+    })
+  }
+
+  if (password !== confirm_password) {
+    return res.render('admin/setup', {
+      error: 'As senhas não coincidem.',
+      minLength: adminModel.getMinPasswordLength()
+    })
+  }
+
+  try {
+    adminModel.setInitialPassword(password)
+    clearAdminCookie(res)
+    return res.redirect('/admin/login?configured=1')
+  } catch (err) {
+    return res.render('admin/setup', {
+      error: err.message,
+      minLength: adminModel.getMinPasswordLength()
+    })
+  }
+})
+
 app.get('/admin/login', (req, res) => {
-  res.render('admin/login')
+  res.render('admin/login', {
+    error: null,
+    success: req.query.configured === '1'
+      ? 'Senha configurada com sucesso. Faça login com a nova senha.'
+      : null
+  })
 })
 
 app.post('/admin/login', express.urlencoded({ extended: true }), (req, res) => {
   const { user, pass } = req.body
 
-  if (
-    user === process.env.ADMIN_USER &&
-    pass === process.env.ADMIN_PASS
-  ) {
+  if (!adminModel.isPasswordInitialized()) {
+    return res.redirect('/admin/setup')
+  }
+
+  if (adminModel.verifyCredentials(user, pass)) {
     const jwt = require('jsonwebtoken')
     const token = jwt.sign(
       { role: 'admin' },
@@ -35,11 +81,14 @@ app.post('/admin/login', express.urlencoded({ extended: true }), (req, res) => {
       { expiresIn: '1h' }
     )
 
-    res.setHeader('Set-Cookie', `admin_token=${token}; HttpOnly; Path=/`)
+    res.setHeader('Set-Cookie', `admin_token=${token}; HttpOnly; Path=/; SameSite=Lax`)
     return res.redirect('/admin/licenses')
   }
 
-  res.send("Credenciais inválidas")
+  res.render('admin/login', {
+    error: 'Credenciais inválidas',
+    success: null
+  })
 })
 
 app.get('/admin/licenses', authAdmin, async (req, res) => {

@@ -36,10 +36,21 @@
 </head>
 <body>
 
+<% if (typeof error !== 'undefined' && error) { %>
+  <div style="background:#f8d7da;color:#721c24;padding:10px;border-radius:6px;font-size:13px;margin-bottom:8px;">
+    <%= error %>
+  </div>
+<% } %>
+<% if (typeof success !== 'undefined' && success) { %>
+  <div style="background:#d4edda;color:#155724;padding:10px;border-radius:6px;font-size:13px;margin-bottom:8px;">
+    <%= success %>
+  </div>
+<% } %>
+
 <form method="POST" action="/admin/login">
   <h2>Admin Login</h2>
-  <input name="user" placeholder="Usuário" required />
-  <input name="pass" type="password" placeholder="Senha" required />
+  <input name="user" placeholder="Usuário" value="admin" required autocomplete="username" />
+  <input name="pass" type="password" placeholder="Senha" required autocomplete="current-password" />
   <button type="submit">Entrar</button>
 </form>
 

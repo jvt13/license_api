@@ -35,4 +35,14 @@ try {
   // ignore, column may already exist
 }
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS admin_account (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    username TEXT NOT NULL UNIQUE DEFAULT 'admin',
+    password_hash TEXT,
+    password_initialized INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT
+  )
+`)
+
 module.exports = db

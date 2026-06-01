@@ -30,10 +30,19 @@ A API sobe na porta definida em `PORT` (padrão **3001**).
 
 | Recurso | URL |
 |---------|-----|
+| Configuração inicial | http://localhost:3001/admin/setup (somente no 1º acesso) |
 | Painel admin | http://localhost:3001/admin/login |
 | API de licença | http://localhost:3001/api/license |
 
 O banco SQLite `license.db` é criado automaticamente na primeira execução.
+
+### Primeiro acesso ao painel
+
+1. Acesse `/admin/setup` (redirecionamento automático se a senha ainda não foi definida).
+2. Defina a senha do usuário **admin** (mínimo 8 caracteres).
+3. Faça login em `/admin/login`.
+
+As credenciais do `.env` (`ADMIN_USER` / `ADMIN_PASS`) **não** são mais usadas para login. A senha fica armazenada com **bcrypt** na tabela `admin_account` do SQLite.
 
 ---
 
@@ -44,9 +53,9 @@ Copie `.env.example` para `.env`:
 | Variável | Obrigatória | Descrição |
 |----------|-------------|-----------|
 | `PORT` | Não | Porta HTTP (padrão `3001`) |
-| `ADMIN_USER` | Sim | Usuário do painel administrativo |
-| `ADMIN_PASS` | Sim | Senha do painel |
 | `ADMIN_SECRET` | Sim | Segredo para JWT de sessão admin (HS256) |
+
+O login do painel usa usuário fixo **admin** e senha definida em `/admin/setup` (persistida no banco).
 
 > **Não versione** o arquivo `.env` nem o `license.db` — eles ficam fora do Git por segurança.
 
@@ -112,6 +121,7 @@ pm2 startup
 - [ ] `license.db` de produção preservado (se já existia)
 - [ ] Porta/firewall liberada ou proxy reverso apontando para a app
 - [ ] HTTPS no proxy (Let's Encrypt, etc.)
+- [ ] Senha inicial definida em `/admin/setup` (primeiro deploy)
 - [ ] Login em `/admin/login` testado
 
 ---
@@ -160,6 +170,7 @@ Após login em `/admin/login`:
 ```bash
 node scripts/test-system-fields.js   # system_name / request_date
 node scripts/qa-full.js              # QA completo (API, exclusão, contadores)
+node scripts/qa-admin-password.js    # QA senha administrativa (altera admin no license.db)
 ```
 
 ---
