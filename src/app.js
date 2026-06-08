@@ -1,5 +1,12 @@
 require('dotenv').config()
 
+// Validar variáveis obrigatórias
+if (!process.env.ADMIN_SECRET) {
+  console.error('❌ ERRO: ADMIN_SECRET não está definido em .env')
+  console.error('   Configure: ADMIN_SECRET=sua-chave-forte')
+  process.exit(1)
+}
+
 const express = require('express')
 const path = require('path')
 const routes = require('./routes/license.routes')
